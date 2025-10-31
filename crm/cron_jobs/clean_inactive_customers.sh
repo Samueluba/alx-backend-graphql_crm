@@ -19,3 +19,26 @@ Repo:
 
 GitHub repository: alx-backend-graphql_crm
 File: clean_inactive_customers.sh, customer_cleanup_crontab.txt
+
+#!/bin/bash
+
+# Path to your Django project
+PROJECT_DIR="/full/path/to/alx-backend-graphql_crm"
+
+# Log file
+LOG_FILE="/tmp/customer_cleanup_log.txt"
+
+# Run Django shell command
+DELETED_COUNT=$(cd $PROJECT_DIR && python manage.py shell -c "
+from datetime import datetime, timedelta
+from crm.models import Customer, Order
+
+one_year_ago = datetime.now() - timedelta(days=365)
+inactive_customers = Customer.objects.filter(order__date__lt=one_year_ago).distinct()
+count = inactive_customers.count()
+inactive_customers.delete()
+print(count)
+")
+
+# Log the deletion with timestamp
+echo \"\$(date '+%Y-%m-%d %H:%M:%S') - Deleted \$DELETED_COUNT inactive customers\" >> $LOG_FILE
