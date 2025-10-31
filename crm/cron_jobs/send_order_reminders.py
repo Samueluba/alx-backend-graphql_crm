@@ -46,3 +46,45 @@ try:
 
 except Exception as e:
     print(f"Error fetching orders: {e}")
+
+#!/usr/bin/env python3
+
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
+from datetime import datetime, timedelta
+
+# GraphQL endpoint
+transport = RequestsHTTPTransport(url="http://localhost:8000/graphql", verify=False)
+client = Client(transport=transport, fetch_schema_from_transport=True)
+
+# Calculate date 7 days ago
+seven_days_ago = (datetime.now() - timedelta(days=7)).date()
+
+# GraphQL query to get orders within last 7 days
+query = gql("""
+query GetRecentOrders($since: Date!) {
+  orders(orderDate_Gte: $since) {
+    id
+    customer {
+      email
+    }
+  }
+}
+""")
+
+# Execute query
+params = {"since": str(seven_days_ago)}
+result = client.execute(query, variable_values=params)
+
+# Log file
+LOG_FILE = "/tmp/order_reminders_log.txt"
+
+# Log each order
+with open(LOG_FILE, "a") as f:
+    for order in result.get("orders", []):
+        order_id = order["id"]
+        email = order["customer"]["email"]
+        f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} - Order ID {order_id} for {email}\n")
+
+print("Order reminders processed!")
+
