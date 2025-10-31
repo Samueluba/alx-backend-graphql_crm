@@ -1,22 +1,22 @@
 #!/bin/bash
 # clean_inactive_customers.sh
-# Deletes customers with no orders in the past year and logs the result.
+# Deletes customers with no orders since a year ago and logs results
 
-# Navigate to the project root (assuming this script lives in crm/cron_jobs)
-cd "$(dirname "$0")/../"
+LOG_FILE="/tmp/customer_cleanup_log.txt"
+TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Run Django shell command to delete inactive customers and log the output
-deleted_count=$(python3 manage.py shell -c "
-from django.utils import timezone
-from datetime import timedelta
+# Run Django shell command to delete inactive customers
+DELETED_COUNT=$(python manage.py shell <<'END'
+from datetime import datetime, timedelta
 from crm.models import Customer
 
-one_year_ago = timezone.now() - timedelta(days=365)
-deleted, _ = Customer.objects.filter(last_order_date__lt=one_year_ago).delete()
-print(deleted)
-")
+one_year_ago = datetime.now() - timedelta(days=365)
+inactive_customers = Customer.objects.filter(last_order_date__lt=one_year_ago)
+count = inactive_customers.count()
+inactive_customers.delete()
+print(count)
+END
+)
 
-# Log result with timestamp
-timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-echo \"[$timestamp] Deleted customers: $deleted_count\" >> /tmp/customer_cleanup_log.txt
-
+# Log results
+echo "$TIMESTAMP - Deleted $DELETED_COUNT inactive customers" >> "$LOG_FILE"
